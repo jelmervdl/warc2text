@@ -31,13 +31,13 @@ include_directories(
 # process subdirectories
 add_subdirectory(src)
 
-# if (PREPROCESS_PATH)
-#     include_directories(${PREPROCESS_PATH})
-#     add_subdirectory(${PREPROCESS_PATH})
-# else ()
-#     include_directories(${PROJECT_SOURCE_DIR}/preprocess)
-#     add_subdirectory(${PROJECT_SOURCE_DIR}/preprocess)
-# endif ()
+if (PREPROCESS_PATH)
+    include_directories(${PREPROCESS_PATH})
+    add_subdirectory(${PREPROCESS_PATH})
+else ()
+    include_directories(${PROJECT_SOURCE_DIR}/preprocess)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/preprocess)
+endif ()
 
 # build libcld2.so
 if (NOT EXISTS "${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so")
@@ -50,3 +50,7 @@ endif ()
 # define executables
 add_executable(warc2text warc2text_main.cc)
 target_link_libraries(warc2text ${Boost_LIBRARIES} warc2text_lib ${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so)
+
+add_executable(warcfilter warcfilter_main.cc)
+target_include_directories(warcfilter PRIVATE preprocess)
+target_link_libraries(warcfilter ${Boost_LIBRARIES} preprocess_util warc2text_lib)
