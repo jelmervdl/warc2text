@@ -7,6 +7,10 @@
 #include "util/pcqueue.hh"
 #include "src/record.hh"
 #include "src/warcreader.hh"
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+
 
 using namespace warc2text;
 
@@ -26,7 +30,11 @@ std::string StripProtocol(const std::string &url) {
 }
 
 int main(int argc, char *argv[]) {
-	std::unordered_set<std::string> urls;
+	boost::log::add_console_log(std::cerr, boost::log::keywords::format = "[%TimeStamp%] [\%Severity%]: %Message%");
+    boost::log::add_common_attributes();
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+
+    std::unordered_set<std::string> urls;
 
 	if (argc < 2) {
 		std::cerr << "Usage: " << argv[0] << " URLFILE [ WARC [ WARC ... ] ]" << std::endl;
@@ -64,6 +72,7 @@ int main(int argc, char *argv[]) {
 						continue;
 
 					std::lock_guard<std::mutex> out_lock(out_mutex);
+					std::cerr << record.getURL() << std::endl;
 					std::cout << content;
 				}
 			}
