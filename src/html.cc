@@ -1,4 +1,5 @@
 #include "html.hh"
+#include <cstring>
 
 
 namespace warc2text {
