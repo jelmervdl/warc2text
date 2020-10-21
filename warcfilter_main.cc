@@ -1,8 +1,8 @@
 #include <algorithm>
-#include <set>
 #include <string>
 #include <fstream>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 #include "util/pcqueue.hh"
 #include "src/record.hh"
@@ -10,7 +10,7 @@
 
 using namespace warc2text;
 
-void ReadURLS(std::istream &in, std::set<std::string> &urls) {
+void ReadURLS(std::istream &in, std::unordered_set<std::string> &urls) {
 	std::string url;
 	while (std::getline(in, url))
 		urls.emplace(url);
@@ -26,7 +26,7 @@ std::string StripProtocol(const std::string &url) {
 }
 
 int main(int argc, char *argv[]) {
-	std::set<std::string> urls;
+	std::unordered_set<std::string> urls;
 
 	if (argc < 2) {
 		std::cerr << "Usage: " << argv[0] << " URLFILE [ WARC [ WARC ... ] ]" << std::endl;
