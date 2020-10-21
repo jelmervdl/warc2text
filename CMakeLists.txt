@@ -40,12 +40,12 @@ else ()
 endif ()
 
 # build libcld2.so
-if (NOT EXISTS "${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so")
-    execute_process(
-            COMMAND bash -c "export CFLAGS='-Wno-narrowing -O3' && ./compile_libs.sh"
-            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/cld2/internal
-    )
-endif ()
+# if (NOT EXISTS "${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so")
+#     execute_process(
+#             COMMAND bash -c "export CFLAGS='-Wno-narrowing -O3' && ./compile_libs.sh"
+#             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/cld2/internal
+#     )
+# endif ()
 
 # define executables
 add_executable(warc2text warc2text_main.cc)

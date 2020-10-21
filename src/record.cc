@@ -4,7 +4,6 @@
 
 #include "record.hh"
 #include "util.hh"
-#include "lang.hh"
 #include "html.hh"
 #include <boost/log/trivial.hpp>
 
@@ -127,7 +126,7 @@ namespace warc2text {
     }
 
     bool Record::detectLanguage(){
-        return warc2text::detectLanguage(plaintext, language);
+        return false;
     }
 
     const std::string& Record::getHeaderProperty(const std::string& property) const {
