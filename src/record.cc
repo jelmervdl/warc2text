@@ -64,6 +64,8 @@ namespace warc2text {
         if (header.count("content-type") == 1)
             WARCcontentType = header["content-type"];
 
+        return; // I don't care about the rest at the moment, and utf8 conversion is *expensive*
+
         payload_start = last_pos;
         if (header["warc-type"] == "response") {
             // parse HTTP header
