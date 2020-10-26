@@ -4,6 +4,7 @@
 #include <thread>
 #include <unordered_set>
 #include <vector>
+#include "util/compress.hh"
 #include "util/pcqueue.hh"
 #include "src/record.hh"
 #include "src/warcreader.hh"
@@ -71,9 +72,12 @@ int main(int argc, char *argv[]) {
 						&& urls.find(StripProtocol(record.getURL())) == urls.end())
 						continue;
 
+					std::string compressed;
+					util::GZCompress(content, compressed);
+
 					std::lock_guard<std::mutex> out_lock(out_mutex);
 					std::cerr << record.getURL() << std::endl;
-					std::cout << content;
+					std::cout << compressed;
 				}
 			}
 		});
