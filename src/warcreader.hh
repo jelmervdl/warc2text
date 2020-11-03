@@ -20,7 +20,7 @@ namespace warc2text {
             uint8_t* scratch;
 
             void openFile(const std::string& filename);
-            void closeFile() {std::fclose(file);}
+            void closeFile();
             std::size_t readChunk();
     };
 }

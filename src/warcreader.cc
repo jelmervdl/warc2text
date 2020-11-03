@@ -67,6 +67,11 @@ namespace warc2text {
             file = std::fopen(filename.c_str(), "r");
     }
 
+    void WARCReader::closeFile() {
+        if (file)
+            std::fclose(file);
+    }
+
     WARCReader::operator bool() const {
         return (bool) file;
     }
