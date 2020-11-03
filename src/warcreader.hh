@@ -10,6 +10,7 @@ namespace warc2text {
             WARCReader();
             explicit WARCReader(const std::string& filename);
             bool getRecord(std::string& out);
+            operator bool() const;
             ~WARCReader();
         private:
             std::FILE* file;

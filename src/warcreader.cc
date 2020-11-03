@@ -63,11 +63,12 @@ namespace warc2text {
     void WARCReader::openFile(const std::string& filename){
         if (filename.empty() || filename == "-")
             file = std::freopen(nullptr, "rb", stdin); // make sure stdin is open in binary mode
-        else file = std::fopen(filename.c_str(), "r");
-        if (!file) {
-            std::perror("File opening failed");
-            exit(1);
-        }
+        else
+            file = std::fopen(filename.c_str(), "r");
+    }
+
+    WARCReader::operator bool() const {
+        return (bool) file;
     }
 
     std::size_t WARCReader::readChunk(){

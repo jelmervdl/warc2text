@@ -64,6 +64,11 @@ int main(int argc, char *argv[]) {
 			while (!file_queue.Consume(filename).empty()) {
 				WARCReader reader(filename);
 
+				if (!reader) {
+					std::cerr << "Error: Could not open " << filename << std::endl;
+					continue;
+				}
+
 				std::string content;
 				while (reader.getRecord(content)) {
 					Record record(content);
