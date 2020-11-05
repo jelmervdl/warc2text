@@ -13,7 +13,9 @@ using namespace warc2text;
 
 struct Options {
     std::vector<std::string> warcs;
+    bool verbose{};
     std::string output;
+    std::string tag_filters_filename;
 };
 
 void parseArgs(int argc, char *argv[], Options& out) {
@@ -22,7 +24,9 @@ void parseArgs(int argc, char *argv[], Options& out) {
     desc.add_options()
         ("help,h", po::bool_switch(), "Show this help message")
         ("output,o", po::value(&out.output)->default_value("."), "Output folder")
-        ("input,i", po::value(&out.warcs)->multitoken(), "Input WARC file name(s)");
+        ("input,i", po::value(&out.warcs)->multitoken(), "Input WARC file name(s)")
+        ("tag-filters", po::value(&out.tag_filters_filename), "Plain text file containing tag filters")
+        ("verbose,v", po::bool_switch(&out.verbose)->default_value(""), "Verbosity level");
 
     po::positional_options_description pd;
     pd.add("input", -1);
@@ -30,7 +34,11 @@ void parseArgs(int argc, char *argv[], Options& out) {
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(desc).positional(pd).run(), vm);
     if (argc == 1 || vm["help"].as<bool>()) {
-        std::cerr << "Usage: " << argv[0] << " -o output_folder [WARC_files]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " -o <output_folder> [--tag-filters <filters_file>] <warc_file>...\n"
+                "\n"
+                "Options:\n"
+                " -o                Output folder, required\n"
+                " --tag-filters     File containing filters, format: \"html_tag <tab> tag_attr <tab> value\"\n";
         exit(1);
     }
     po::notify(vm);
@@ -38,18 +46,20 @@ void parseArgs(int argc, char *argv[], Options& out) {
 
 
 int main(int argc, char *argv[]) {
-    boost::log::add_console_log(std::cerr, boost::log::keywords::format = "[%TimeStamp%] [\%Severity%]: %Message%");
-    boost::log::add_common_attributes();
-    boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
-
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
     // parse arguments
     Options options;
     parseArgs(argc,argv, options);
 
-    WARCPreprocessor warcpproc(options.output);
-    for (std::string file : options.warcs){
+    // configure logging
+    boost::log::add_console_log(std::cerr, boost::log::keywords::format = "[%TimeStamp%] [\%Severity%] %Message%");
+    boost::log::add_common_attributes();
+    auto verbosity_level = (options.verbose) ? boost::log::trivial::trace : boost::log::trivial::info;
+    boost::log::core::get()->set_filter(boost::log::trivial::severity >= verbosity_level);
+
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    WARCPreprocessor warcpproc(options.output, options.tag_filters_filename);
+    for (const std::string& file : options.warcs){
         warcpproc.process(file);
     }
     warcpproc.printStatistics();

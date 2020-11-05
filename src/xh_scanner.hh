@@ -6,7 +6,10 @@
 
 namespace markup {
     struct instream {
-        virtual char get_char() = 0;
+        const char *p;
+        const char *end;
+        explicit instream(const char *src) : p(src), end(src+strlen(src)) {}
+        char get_char() { return p < end ? *p++ : 0; }
     };
 
 
@@ -28,6 +31,7 @@ namespace markup {
             TT_SPACE,
 
             TT_DATA,        // content of followings:
+            // (also content of TT_TAG_START and TT_TAG_END, if the tag is 'script')
 
             TT_COMMENT_START, TT_COMMENT_END, // after "<!--" and "-->"
             TT_CDATA_START, TT_CDATA_END,     // after "<![CDATA[" and "]]>"
@@ -79,6 +83,8 @@ namespace markup {
         token_type scan_comment();
 
         token_type scan_cdata();
+
+        token_type scan_script();
 
         token_type scan_pi();
 

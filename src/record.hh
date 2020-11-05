@@ -7,6 +7,7 @@
 
 #include <string>
 #include <unordered_map>
+#include "util.hh"
 
 namespace warc2text {
     class Record {
@@ -14,8 +15,6 @@ namespace warc2text {
         Record() {};
 
         explicit Record(const std::string& content);
-        void process(); // does the entire processing of the record
-
         const std::string& getHeaderProperty(const std::string& property) const;
         bool headerExists(const std::string& property) const;
 
@@ -31,7 +30,8 @@ namespace warc2text {
         const std::string& getHTTPcontentType() const;
         const std::string& getCharset() const;
 
-        void cleanPayload();
+        int cleanPayload();
+        int cleanPayload(const util::umap_tag_filters& tagFilters);
         bool detectLanguage();
 
     private:
@@ -42,7 +42,6 @@ namespace warc2text {
         std::string language;
 
         // these are present in the headers, but it's convenient to have them apart also
-        std::string uuid;
         std::string recordType;
         std::string WARCcontentType;
         std::string cleanHTTPcontentType;

@@ -3,7 +3,7 @@
 //
 
 #include "record.hh"
-#include "util.hh"
+#include "lang.hh"
 #include "html.hh"
 #include <boost/log/trivial.hpp>
 
@@ -11,6 +11,7 @@
 // #include <boost/iostreams/categories.hpp>
 // #include <boost/iostreams/code_converter.hpp>
 #include <boost/locale.hpp>
+#include <uchardet/uchardet.h>
 
 namespace warc2text {
     std::size_t read_header(const std::string& content, std::size_t last_pos, std::unordered_map<std::string,std::string>& header) {
@@ -55,8 +56,6 @@ namespace warc2text {
         // TODO: check for mandatory header fields
         if (header.count("warc-type") == 1)
             recordType = header["warc-type"];
-        if (header.count("warc-record-id") == 1)
-            uuid = header["warc-record-id"];
 
         if (header.count("warc-target-uri") == 1)
             url = header["warc-target-uri"];
@@ -86,20 +85,9 @@ namespace warc2text {
                 cleanContentType(HTTPheader["content-type"]);
         }
 
-        // convert to utf8
-        // assume utf8 if unknown for now
-        if (charset == "UTF-8" || charset == "") {
-            payload = std::string(content, payload_start, std::string::npos);
-        }
-        // if not utf8, convert based on charset
-        else {
-            try {
-                payload = boost::locale::conv::to_utf<char>(&content[payload_start], charset);
-            } catch (boost::locale::conv::invalid_charset_error e) {
-                BOOST_LOG_TRIVIAL(warning) << "In record " << uuid << " invalid charset " << charset;
-                payload = "";
-            }
-        }
+        payload = std::string(content, payload_start, std::string::npos);
+        util::trim(payload);
+
         util::trim(payload); //remove \r\n\r\n at the end
     }
 
@@ -113,7 +101,7 @@ namespace warc2text {
             delim = HTTPcontentType.find("charset=");
             if (delim != std::string::npos) {
                 // cut until next ';' or until the end otherwise
-                charset = HTTPcontentType.substr(delim+8, HTTPcontentType.find(";", delim+8) - delim - 8);
+                charset = HTTPcontentType.substr(delim+8, HTTPcontentType.find(';', delim+8) - delim - 8);
                 util::trim(charset);
             }
         }
@@ -121,10 +109,45 @@ namespace warc2text {
         util::trim(cleanHTTPcontentType);
     }
 
-    void Record::cleanPayload(){
-        processHTML(payload, plaintext);
+    int Record::cleanPayload(){
+        util::umap_tag_filters tagFilters;
+        return cleanPayload(tagFilters);
+    }
+
+    int Record::cleanPayload(const util::umap_tag_filters& tagFilters){
+        // remove HTML tags:
+        int retval = processHTML(payload, plaintext, tagFilters);
+
+        // detect charset
+        std::string detected_charset;
+        bool detection_result = util::detectCharset(plaintext, detected_charset);
+
+        // trust the detected more than the specified charset
+        // if detection fails, go with the original one
+        if (detection_result)
+            charset = detected_charset;
+
+        // attempt conversion is we know the charset, and it is not utf8/ascii
+        if (!charset.empty() && charset != "utf-8" && charset != "ascii" && charset != "utf8") {
+            try {
+                plaintext = boost::locale::conv::to_utf<char>(plaintext, charset);
+            } catch (const boost::locale::conv::invalid_charset_error& e) {
+                // BOOST_LOG_TRIVIAL(warning) << "In record " << url << " invalid charset " << charset;
+                plaintext = "";
+                return util::UNKNOWN_ENCODING_ERROR;
+            } catch (const boost::locale::conv::conversion_error& e) {
+                // BOOST_LOG_TRIVIAL(warning) << "In record " << url << " conversion error from " << charset;
+                plaintext = "";
+                return util::UTF8_CONVERSION_ERROR;
+            }
+        } else if (charset.empty()) {
+            // throw out documents if we don't know the charset
+            plaintext = "";
+            return util::UNKNOWN_ENCODING_ERROR;
+        }
         unescapeEntities(plaintext, plaintext);
         util::trimLines(plaintext);
+        return retval;
     }
 
     bool Record::detectLanguage(){

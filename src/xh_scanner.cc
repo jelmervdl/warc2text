@@ -34,8 +34,8 @@ namespace markup {
 
         if (c == 0) return TT_EOF;
         else if (c == '<') return scan_tag();
-        else if (c == '&')
-            c = scan_entity();
+        // else if (c == '&')
+        //     c = scan_entity();
         else
             ws = is_whitespace(c);
 
@@ -68,12 +68,19 @@ namespace markup {
         char c = skip_whitespace();
 
         if (c == '>') {
+            if (equal(tag_name, "script", 6)){
+                // script is special because we want to parse the attributes,
+                // but not the content
+                c_scan = &scanner::scan_script;
+                return scan_script();
+            }
             c_scan = &scanner::scan_body;
             return scan_body();
         }
         if (c == '/') {
             char t = get_char();
             if (t == '>') {
+                // self closing tag
                 c_scan = &scanner::scan_body;
                 return TT_TAG_END;
             }
@@ -113,7 +120,7 @@ namespace markup {
             c = get_char();
             while (c) {
                 if (c == '\"') return TT_ATTR;
-                if (c == '&') c = scan_entity();
+                // if (c == '&') c = scan_entity();
                 append_value(c);
                 c = get_char();
             }
@@ -122,7 +129,7 @@ namespace markup {
             c = get_char();
             while (c) {
                 if (c == '\'') return TT_ATTR;
-                if (c == '&') c = scan_entity();
+                // if (c == '&') c = scan_entity();
                 append_value(c);
                 c = get_char();
             }
@@ -300,6 +307,36 @@ namespace markup {
         return TT_DATA;
     }
 
+    scanner::token_type scanner::scan_script() {
+        if (got_tail) {
+            c_scan = &scanner::scan_body;
+            got_tail = false;
+            return TT_TAG_END;
+        }
+        for (value_length = 0; value_length < (MAX_TOKEN_SIZE - 1); ++value_length) {
+            char c = get_char();
+            if (c == 0)
+                return TT_EOF;
+            value[value_length] = c;
+
+            if (value_length >= 8
+                && value[value_length] == '>'
+                && value[value_length - 1] == 't'
+                && value[value_length - 2] == 'p'
+                && value[value_length - 3] == 'i'
+                && value[value_length - 4] == 'r'
+                && value[value_length - 5] == 'c'
+                && value[value_length - 6] == 's'
+                && value[value_length - 7] == '/'
+                && value[value_length - 8] == '<' ) {
+                got_tail = true;
+                value_length -= 8;
+                break;
+            }
+        }
+        return TT_DATA;
+    }
+
     scanner::token_type scanner::scan_cdata() {
         if (got_tail) {
             c_scan = &scanner::scan_body;
@@ -368,4 +405,4 @@ namespace markup {
 
 
 }
- 
+

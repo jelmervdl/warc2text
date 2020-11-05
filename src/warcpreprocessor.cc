@@ -5,7 +5,18 @@
 namespace warc2text {
     const std::unordered_set<std::string> WARCPreprocessor::textContentTypes = {"text/plain", "text/html", "application/xml"};
 
-    WARCPreprocessor::WARCPreprocessor(const std::string& outputFolder) : writer(outputFolder), totalRecords(0), textRecords(0), langRecords(0) {}
+    WARCPreprocessor::WARCPreprocessor(const std::string& outputFolder, const std::string& tagFiltersFile) :
+        writer(outputFolder),
+        totalRecords(0),
+        textRecords(0),
+        langRecords(0),
+        totalBytes(0),
+        textBytes(0),
+        langBytes(0),
+        tagFilters() {
+            if (!tagFiltersFile.empty())
+                util::readTagFilters(tagFiltersFile, tagFilters);
+        }
 
 
     void WARCPreprocessor::process(const std::string& filename) {
@@ -22,6 +33,9 @@ namespace warc2text {
                 continue;
 
             Record record(content);
+            if (record.getPayload().empty())
+                continue;
+
             if ((record.getRecordType() != "response" && record.getRecordType() != "resource") || record.getWARCcontentType().find("application/http") == std::string::npos)
                 continue;
 
@@ -30,29 +44,42 @@ namespace warc2text {
 
 
             ++totalRecords;
+            totalBytes += record.getPayload().size();
             if (boost::algorithm::ends_with(record.getURL(), "robots.txt"))
                 continue;
 
-            record.cleanPayload();
+            int clean_retval = record.cleanPayload(tagFilters);
+            if (clean_retval == util::FILTERED_DOCUMENT_ERROR) {
+                BOOST_LOG_TRIVIAL(info) << "Record " << record.getURL() << " discarded due to tag filters";
+                continue;
+            }
+            // TODO: decide what to do with other cases?
+
             if (record.getPlainText().empty())
                 continue;
 
             ++textRecords;
+            textBytes += record.getPlainText().size();
 
             reliable = record.detectLanguage();
             if (!reliable)
                 continue;
 
             ++langRecords;
+            langBytes += record.getPlainText().size();
 
             writer.write(record);
         }
     }
 
-    void WARCPreprocessor::printStatistics(){
+    void WARCPreprocessor::printStatistics() const{
         BOOST_LOG_TRIVIAL(info) << "total records: " << totalRecords;
         BOOST_LOG_TRIVIAL(info) << "text records: " << textRecords;
-        BOOST_LOG_TRIVIAL(info) << "lang recods: " << langRecords;
+        BOOST_LOG_TRIVIAL(info) << "lang records: " << langRecords;
+
+        BOOST_LOG_TRIVIAL(info) << "total bytes: " << totalBytes;
+        BOOST_LOG_TRIVIAL(info) << "text bytes: " << textBytes;
+        BOOST_LOG_TRIVIAL(info) << "lang bytes: " << langBytes;
     }
 
 }

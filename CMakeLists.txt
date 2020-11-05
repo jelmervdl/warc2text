@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/usr/local/opt/icu4c/include")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I /usr/local/opt/icu4c/include")
 endif ()
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Ofast")
 if (NOT CMAKE_BUILD_TYPE)
@@ -40,17 +40,28 @@ else ()
 endif ()
 
 # build libcld2.so
-# if (NOT EXISTS "${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so")
-#     execute_process(
-#             COMMAND bash -c "export CFLAGS='-Wno-narrowing -O3' && ./compile_libs.sh"
-#             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/cld2/internal
-#     )
-# endif ()
+if (NOT EXISTS "${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so")
+    execute_process(
+            COMMAND bash -c "export CFLAGS='-Wno-narrowing -O3' && bash compile_libs.sh"
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/cld2/internal
+    )
+endif ()
 
 # define executables
 add_executable(warc2text warc2text_main.cc)
-target_link_libraries(warc2text ${Boost_LIBRARIES} warc2text_lib ${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so)
+target_link_libraries(warc2text
+    warc2text_lib
+    ${Boost_LIBRARIES}
+    ${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so
+)
 
 add_executable(warcfilter warcfilter_main.cc)
 target_include_directories(warcfilter PRIVATE preprocess)
 target_link_libraries(warcfilter ${Boost_LIBRARIES} preprocess_util warc2text_lib)
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    add_custom_command(TARGET warc2text
+            POST_BUILD COMMAND
+            ${CMAKE_INSTALL_NAME_TOOL} -change libcld2.so ${PROJECT_SOURCE_DIR}/cld2/internal/libcld2.so
+            $<TARGET_FILE:warc2text>)
+endif()
